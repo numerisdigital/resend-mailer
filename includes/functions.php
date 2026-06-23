@@ -40,6 +40,8 @@ function rm_default_template() {
     <tr>
       <td align="center" style="padding:48px 20px;">
 
+        {{logo_above}}
+
         <table class="rm-container" width="600" cellpadding="0" cellspacing="0" role="presentation"
                style="background-color:{{container_color}};border-radius:10px;overflow:hidden;max-width:600px;width:100%;">
 

@@ -5,6 +5,7 @@ add_action( 'admin_menu',            'rm_add_menu' );
 add_action( 'admin_enqueue_scripts', 'rm_enqueue_assets' );
 add_action( 'wp_ajax_rm_send_test',      'rm_ajax_send_test' );
 add_action( 'wp_ajax_rm_reset_template', 'rm_ajax_reset_template' );
+add_action( 'wp_ajax_rm_preview_email',  'rm_ajax_preview_email' );
 
 /* ── Menu ─────────────────────────────────────────────────────────── */
 
@@ -49,28 +50,45 @@ function rm_settings_page() {
 	if ( ! current_user_can( 'manage_options' ) ) return;
 
 	/* ── Handle save ─────────────────────────────────────────────── */
+	/* Only update options for the tab that submitted the form — other tabs'
+	   fields are not rendered and would overwrite stored values with blanks. */
 	$saved = false;
 	if ( isset( $_POST['rm_nonce_field'] ) && wp_verify_nonce( sanitize_key( $_POST['rm_nonce_field'] ), 'rm_save' ) ) {
 
-		update_option( 'rm_api_key',           sanitize_text_field( wp_unslash( $_POST['rm_api_key'] ?? '' ) ) );
-		update_option( 'rm_from_name',         sanitize_text_field( wp_unslash( $_POST['rm_from_name'] ?? '' ) ) );
-		update_option( 'rm_from_email',        sanitize_email( wp_unslash( $_POST['rm_from_email'] ?? '' ) ) );
-		update_option( 'rm_reply_to',          sanitize_email( wp_unslash( $_POST['rm_reply_to'] ?? '' ) ) );
-		update_option( 'rm_intercept_wp_mail', isset( $_POST['rm_intercept_wp_mail'] ) ? '1' : '0' );
+		$saving_tab = sanitize_key( $_POST['rm_saving_tab'] ?? 'sending' );
 
-		update_option( 'rm_bg_color',        sanitize_hex_color( wp_unslash( $_POST['rm_bg_color'] ?? '' ) ) ?: '#f0f0f0' );
-		update_option( 'rm_container_color', sanitize_hex_color( wp_unslash( $_POST['rm_container_color'] ?? '' ) ) ?: '#ffffff' );
-		update_option( 'rm_text_color',      sanitize_hex_color( wp_unslash( $_POST['rm_text_color'] ?? '' ) ) ?: '#1a1a1a' );
-		update_option( 'rm_logo_id',         absint( $_POST['rm_logo_id'] ?? 0 ) );
+		if ( $saving_tab === 'sending' ) {
+			update_option( 'rm_api_key',           sanitize_text_field( wp_unslash( $_POST['rm_api_key'] ?? '' ) ) );
+			update_option( 'rm_from_name',         sanitize_text_field( wp_unslash( $_POST['rm_from_name'] ?? '' ) ) );
+			update_option( 'rm_from_email',        sanitize_email( wp_unslash( $_POST['rm_from_email'] ?? '' ) ) );
+			update_option( 'rm_reply_to',          sanitize_email( wp_unslash( $_POST['rm_reply_to'] ?? '' ) ) );
+			update_option( 'rm_intercept_wp_mail', isset( $_POST['rm_intercept_wp_mail'] ) ? '1' : '0' );
+		}
 
-		$allowed_fonts = array_keys( RM_FONTS );
-		$hf = sanitize_text_field( wp_unslash( $_POST['rm_heading_font'] ?? '' ) );
-		$bf = sanitize_text_field( wp_unslash( $_POST['rm_body_font'] ?? '' ) );
-		update_option( 'rm_heading_font', in_array( $hf, $allowed_fonts, true ) ? $hf : 'Georgia, "Times New Roman", serif' );
-		update_option( 'rm_body_font',    in_array( $bf, $allowed_fonts, true ) ? $bf : 'Arial, Helvetica, sans-serif' );
+		if ( $saving_tab === 'design' ) {
+			update_option( 'rm_bg_color',        sanitize_hex_color( wp_unslash( $_POST['rm_bg_color'] ?? '' ) ) ?: '#f0f0f0' );
+			update_option( 'rm_container_color', sanitize_hex_color( wp_unslash( $_POST['rm_container_color'] ?? '' ) ) ?: '#ffffff' );
+			update_option( 'rm_text_color',      sanitize_hex_color( wp_unslash( $_POST['rm_text_color'] ?? '' ) ) ?: '#1a1a1a' );
+			update_option( 'rm_logo_id',         absint( $_POST['rm_logo_id'] ?? 0 ) );
+			update_option( 'rm_logo_height',     max( 1, absint( $_POST['rm_logo_height'] ?? 48 ) ) );
 
-		// Template: admins may save full HTML — skip kses.
-		update_option( 'rm_template', wp_unslash( $_POST['rm_template'] ?? '' ) );
+			$logo_align = sanitize_key( $_POST['rm_logo_align'] ?? 'center' );
+			update_option( 'rm_logo_align', in_array( $logo_align, [ 'left', 'center', 'right' ], true ) ? $logo_align : 'center' );
+
+			$logo_position = sanitize_key( $_POST['rm_logo_position'] ?? 'inside' );
+			update_option( 'rm_logo_position', in_array( $logo_position, [ 'inside', 'above' ], true ) ? $logo_position : 'inside' );
+
+			$allowed_fonts = array_keys( RM_FONTS );
+			$hf = sanitize_text_field( wp_unslash( $_POST['rm_heading_font'] ?? '' ) );
+			$bf = sanitize_text_field( wp_unslash( $_POST['rm_body_font'] ?? '' ) );
+			update_option( 'rm_heading_font', in_array( $hf, $allowed_fonts, true ) ? $hf : 'Georgia, "Times New Roman", serif' );
+			update_option( 'rm_body_font',    in_array( $bf, $allowed_fonts, true ) ? $bf : 'Arial, Helvetica, sans-serif' );
+		}
+
+		if ( $saving_tab === 'template' ) {
+			// Admins may save full HTML — skip kses.
+			update_option( 'rm_template', wp_unslash( $_POST['rm_template'] ?? '' ) );
+		}
 
 		$saved = true;
 	}
@@ -93,6 +111,9 @@ function rm_settings_page() {
 	$text_color     = rm_opt( 'text_color',      '#1a1a1a' );
 	$logo_id        = (int) rm_opt( 'logo_id' );
 	$logo_url       = $logo_id ? wp_get_attachment_url( $logo_id ) : '';
+	$logo_height    = rm_opt( 'logo_height', '48' );
+	$logo_align     = rm_opt( 'logo_align',  'center' );
+	$logo_position  = rm_opt( 'logo_position', 'inside' );
 	$heading_font   = rm_opt( 'heading_font', 'Georgia, "Times New Roman", serif' );
 	$body_font      = rm_opt( 'body_font',    'Arial, Helvetica, sans-serif' );
 	$template       = rm_opt( 'template' ) ?: rm_default_template();
@@ -123,6 +144,7 @@ function rm_settings_page() {
 
 		<form method="post" class="rm-form">
 			<?php wp_nonce_field( 'rm_save', 'rm_nonce_field' ); ?>
+			<input type="hidden" name="rm_saving_tab" value="<?php echo esc_attr( $tab ); ?>">
 
 			<!-- ══════════════════════════════════════════════════
 			     TAB: SENDING
@@ -261,7 +283,58 @@ function rm_settings_page() {
 								Remove
 							</button>
 						</div>
-						<p class="rm-desc">SVG, PNG or WebP recommended. Will be shown at the top of every email (max-height 56px).</p>
+						<p class="rm-desc">SVG, PNG or WebP recommended.</p>
+					</div>
+				</div>
+
+				<div class="rm-row">
+					<label class="rm-label" for="rm_logo_height">Logo Height</label>
+					<div class="rm-control">
+						<div class="rm-number-wrap">
+							<input type="number" id="rm_logo_height" name="rm_logo_height"
+							       value="<?php echo esc_attr( $logo_height ); ?>"
+							       min="10" max="200" step="1" class="rm-input rm-input--short">
+							<span class="rm-unit">px &nbsp;&nbsp;(width: auto)</span>
+						</div>
+					</div>
+				</div>
+
+				<div class="rm-row">
+					<label class="rm-label">Alignment</label>
+					<div class="rm-control">
+						<div class="rm-radio-group">
+							<?php foreach ( [ 'left' => 'Left', 'center' => 'Center', 'right' => 'Right' ] as $val => $lbl ) : ?>
+							<label class="rm-radio-label">
+								<input type="radio" name="rm_logo_align" value="<?php echo esc_attr( $val ); ?>"
+								       <?php checked( $logo_align, $val ); ?>>
+								<?php echo esc_html( $lbl ); ?>
+							</label>
+							<?php endforeach; ?>
+						</div>
+					</div>
+				</div>
+
+				<div class="rm-row">
+					<label class="rm-label">Position</label>
+					<div class="rm-control">
+						<div class="rm-radio-group rm-radio-group--stacked">
+							<label class="rm-radio-label rm-radio-label--block">
+								<input type="radio" name="rm_logo_position" value="inside"
+								       <?php checked( $logo_position, 'inside' ); ?>>
+								<span>
+									<strong>Inside the card</strong>
+									<span class="rm-radio-desc">Logo sits at the top of the email card, within the container background.</span>
+								</span>
+							</label>
+							<label class="rm-radio-label rm-radio-label--block">
+								<input type="radio" name="rm_logo_position" value="above"
+								       <?php checked( $logo_position, 'above' ); ?>>
+								<span>
+									<strong>Above the card</strong>
+									<span class="rm-radio-desc">Logo floats above the card against the email background, with padding above and below.</span>
+								</span>
+							</label>
+						</div>
 					</div>
 				</div>
 			</div>
@@ -360,6 +433,9 @@ function rm_settings_page() {
 
 			<div class="rm-footer-bar">
 				<button type="submit" class="rm-btn rm-btn--primary">Save settings</button>
+				<a href="#" id="rm-preview-email" class="rm-btn rm-btn--secondary" target="_blank" rel="noopener">
+					Preview email
+				</a>
 			</div>
 
 		</form>
@@ -370,7 +446,7 @@ function rm_settings_page() {
 /* ── AJAX: test email ─────────────────────────────────────────────── */
 
 function rm_ajax_send_test() {
-	check_ajax_referer( 'rm_nonce' );
+	check_ajax_referer( 'rm_nonce', 'nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_send_json_error( 'Insufficient permissions.' );
 	}
@@ -397,9 +473,33 @@ function rm_ajax_send_test() {
 /* ── AJAX: reset template ─────────────────────────────────────────── */
 
 function rm_ajax_reset_template() {
-	check_ajax_referer( 'rm_nonce' );
+	check_ajax_referer( 'rm_nonce', 'nonce' );
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_send_json_error( 'Insufficient permissions.' );
 	}
 	wp_send_json_success( rm_default_template() );
+}
+
+/* ── AJAX: preview email in browser ──────────────────────────────── */
+
+function rm_ajax_preview_email() {
+	check_ajax_referer( 'rm_nonce', 'nonce' );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( 'Unauthorized', 403 );
+	}
+
+	$heading_font = rm_opt( 'heading_font', 'Georgia, "Times New Roman", serif' );
+	$text_color   = rm_opt( 'text_color', '#1a1a1a' );
+
+	$body = '<h2 style="margin:0 0 16px;font-family:' . esc_attr( $heading_font ) . ';font-size:24px;font-weight:600;color:' . esc_attr( $text_color ) . ';">Preview email ✓</h2>'
+	      . '<p style="margin:0 0 12px;">This is a live preview of your email template using your current Design settings. All variables — colours, fonts, and logo — are rendered exactly as they will appear in sent emails.</p>'
+	      . '<p style="margin:0;color:#6b7280;font-size:14px;">Generated by Resend Mailer &nbsp;·&nbsp; ' . esc_html( get_bloginfo( 'name' ) ) . '</p>';
+
+	$html = rm_render_template( $body, 'Email Preview — ' . get_bloginfo( 'name' ) );
+
+	header( 'Content-Type: text/html; charset=utf-8' );
+	header( 'X-Robots-Tag: noindex' );
+	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- full HTML email output
+	echo $html;
+	exit;
 }

@@ -244,6 +244,56 @@
 .rm-toggle input:checked ~ .rm-track { background: #0073aa; }
 .rm-toggle input:checked ~ .rm-track .rm-thumb { transform: translateX(22px); }
 
+/* ── Number input ─────────────────────────────────────────────────── */
+.rm-input--short {
+	max-width: 90px !important;
+}
+.rm-number-wrap {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.rm-unit {
+	font-size: 13px;
+	color: #646970;
+}
+
+/* ── Radio groups ─────────────────────────────────────────────────── */
+.rm-radio-group {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+.rm-radio-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+	color: #1d2327;
+	cursor: pointer;
+}
+.rm-radio-group--stacked { flex-direction: column; gap: 10px; }
+.rm-radio-label--block {
+	align-items: flex-start;
+	gap: 10px;
+	padding: 12px 14px;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	transition: border-color .15s, background .15s;
+}
+.rm-radio-label--block:has(input:checked) {
+	border-color: #0073aa;
+	background: #f0f7fb;
+}
+.rm-radio-label--block strong { display: block; font-size: 13px; }
+.rm-radio-desc {
+	display: block;
+	font-size: 12px;
+	color: #646970;
+	margin-top: 2px;
+	line-height: 1.4;
+}
+
 /* ── Logo ─────────────────────────────────────────────────────────── */
 .rm-logo-preview {
 	display: none;
@@ -390,4 +440,7 @@
 	margin-top: 24px;
 	padding-top: 20px;
 	border-top: 1px solid #dcdcde;
+	display: flex;
+	align-items: center;
+	gap: 10px;
 }

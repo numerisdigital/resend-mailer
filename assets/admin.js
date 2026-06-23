@@ -83,6 +83,13 @@
       });
   });
 
+  /* ── Preview email ────────────────────────────────────────────── */
+  $('#rm-preview-email').on('click', function (e) {
+    e.preventDefault();
+    var url = rmAdmin.ajaxUrl + '?action=rm_preview_email&nonce=' + encodeURIComponent(rmAdmin.nonce);
+    window.open(url, '_blank', 'noopener');
+  });
+
   /* ── Reset template ───────────────────────────────────────────── */
   $('#rm-reset-template').on('click', function () {
     if (!window.confirm(rmAdmin.resetConfirm)) return;
