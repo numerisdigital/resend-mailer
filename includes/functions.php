@@ -9,6 +9,15 @@ function rm_opt( $key, $default = '' ) {
 }
 
 /**
+ * Parse a comma-separated string of email addresses into a clean array,
+ * silently dropping anything that isn't a valid email.
+ */
+function rm_parse_email_list( $value ) {
+	$parts = array_map( 'trim', explode( ',', (string) $value ) );
+	return array_values( array_filter( $parts, 'is_email' ) );
+}
+
+/**
  * Default HTML email template.
  * Uses {{variable}} placeholders replaced at send-time.
  */

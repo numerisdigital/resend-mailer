@@ -27,6 +27,10 @@ function rm_intercept_wp_mail( $null, $atts ) {
 	$from_name  = rm_opt( 'from_name',  get_bloginfo( 'name' ) );
 	$from_email = rm_opt( 'from_email', (string) get_option( 'admin_email' ) );
 
+	// A caller-supplied Reply-To header (e.g. a contact form replying to
+	// whoever submitted it) takes priority over the plugin's static setting.
+	$reply_to = '';
+
 	foreach ( $headers as $header ) {
 		if ( ! is_string( $header ) ) continue;
 		if ( stripos( $header, 'from:' ) === 0 ) {
@@ -37,13 +41,40 @@ function rm_intercept_wp_mail( $null, $atts ) {
 			} elseif ( is_email( $from_raw ) ) {
 				$from_email = $from_raw;
 			}
+		} elseif ( stripos( $header, 'reply-to:' ) === 0 ) {
+			$reply_to_raw = trim( substr( $header, 9 ) );
+			if ( preg_match( '/^(.+?)\s*<([^>]+)>$/', $reply_to_raw, $m ) && is_email( trim( $m[2] ) ) ) {
+				$reply_to = trim( $m[2] );
+			} elseif ( is_email( $reply_to_raw ) ) {
+				$reply_to = $reply_to_raw;
+			}
+		}
+	}
+
+	// Test Mode: redirect all mail to the configured test recipient(s)
+	// instead of the real "to", so real contacts never see test traffic.
+	// Otherwise, if Live Recipient(s) is set, use that instead of whatever
+	// recipient the calling code hardcoded — lets recipients be managed
+	// centrally from this settings page rather than buried in theme code.
+	if ( rm_opt( 'test_mode', '0' ) === '1' ) {
+		$test_recipients = rm_parse_email_list( rm_opt( 'test_recipients' ) );
+		if ( ! empty( $test_recipients ) ) {
+			$original_to = implode( ', ', (array) $to );
+			$to          = $test_recipients;
+			$subject     = '[TEST] ' . $subject;
+			$message    .= "\n\n---\nResend Mailer Test Mode: originally addressed to {$original_to}";
+		}
+	} else {
+		$live_recipients = rm_parse_email_list( rm_opt( 'live_recipients' ) );
+		if ( ! empty( $live_recipients ) ) {
+			$to = $live_recipients;
 		}
 	}
 
 	$from = $from_name ? "{$from_name} <{$from_email}>" : $from_email;
 	$html = rm_render_template( $message, $subject );
 
-	rm_send_via_resend( $to, $subject, $html, $from );
+	rm_send_via_resend( $to, $subject, $html, $from, $reply_to );
 
 	return true; // short-circuit wp_mail
 }
@@ -55,9 +86,10 @@ function rm_intercept_wp_mail( $null, $atts ) {
  * @param string       $subject Subject line.
  * @param string       $html    Fully rendered HTML body.
  * @param string       $from    Formatted sender: "Name <email>".
+ * @param string       $reply_to Optional reply-to email, overriding the plugin's static setting.
  * @return array{success: bool, error: string}
  */
-function rm_send_via_resend( $to, $subject, $html, $from = '' ) {
+function rm_send_via_resend( $to, $subject, $html, $from = '', $reply_to = '' ) {
 	$api_key = rm_opt( 'api_key' );
 	if ( ! $api_key ) {
 		return [ 'success' => false, 'error' => 'No Resend API key configured.' ];
@@ -76,7 +108,9 @@ function rm_send_via_resend( $to, $subject, $html, $from = '' ) {
 		'html'    => $html,
 	];
 
-	$reply_to = rm_opt( 'reply_to' );
+	if ( ! $reply_to || ! is_email( $reply_to ) ) {
+		$reply_to = rm_opt( 'reply_to' );
+	}
 	if ( $reply_to && is_email( $reply_to ) ) {
 		$payload['reply_to'] = [ $reply_to ];
 	}

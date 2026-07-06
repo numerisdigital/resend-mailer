@@ -63,6 +63,13 @@ function rm_settings_page() {
 			update_option( 'rm_from_email',        sanitize_email( wp_unslash( $_POST['rm_from_email'] ?? '' ) ) );
 			update_option( 'rm_reply_to',          sanitize_email( wp_unslash( $_POST['rm_reply_to'] ?? '' ) ) );
 			update_option( 'rm_intercept_wp_mail', isset( $_POST['rm_intercept_wp_mail'] ) ? '1' : '0' );
+			update_option( 'rm_test_mode',         isset( $_POST['rm_test_mode'] ) ? '1' : '0' );
+
+			$raw_test_recipients   = sanitize_text_field( wp_unslash( $_POST['rm_test_recipients'] ?? '' ) );
+			update_option( 'rm_test_recipients', implode( ', ', rm_parse_email_list( $raw_test_recipients ) ) );
+
+			$raw_live_recipients   = sanitize_text_field( wp_unslash( $_POST['rm_live_recipients'] ?? '' ) );
+			update_option( 'rm_live_recipients', implode( ', ', rm_parse_email_list( $raw_live_recipients ) ) );
 		}
 
 		if ( $saving_tab === 'design' ) {
@@ -106,6 +113,9 @@ function rm_settings_page() {
 	$from_email     = rm_opt( 'from_email', (string) get_option( 'admin_email' ) );
 	$reply_to       = rm_opt( 'reply_to' );
 	$intercept      = rm_opt( 'intercept_wp_mail', '1' );
+	$test_mode      = rm_opt( 'test_mode', '0' );
+	$test_recipients = rm_opt( 'test_recipients' );
+	$live_recipients = rm_opt( 'live_recipients' );
 	$bg_color       = rm_opt( 'bg_color',        '#f0f0f0' );
 	$container      = rm_opt( 'container_color', '#ffffff' );
 	$text_color     = rm_opt( 'text_color',      '#1a1a1a' );
@@ -131,6 +141,24 @@ function rm_settings_page() {
 
 		<?php if ( $saved ) : ?>
 		<div class="notice notice-success rm-notice is-dismissible"><p>Settings saved successfully.</p></div>
+		<?php endif; ?>
+
+		<?php if ( $test_mode === '1' && rm_parse_email_list( $test_recipients ) ) : ?>
+		<div class="notice notice-warning rm-notice">
+			<p>
+				<strong>Test Mode is active</strong> — every outgoing email from this site is being redirected to
+				<strong><?php echo esc_html( $test_recipients ); ?></strong> instead of its real recipient(s).
+				Turn this off before going live, or real contacts won't receive mail.
+			</p>
+		</div>
+		<?php elseif ( $test_mode !== '1' && rm_parse_email_list( $live_recipients ) ) : ?>
+		<div class="notice notice-info rm-notice">
+			<p>
+				<strong>Live Recipient override is active</strong> — every outgoing email from this site is being sent to
+				<strong><?php echo esc_html( $live_recipients ); ?></strong> instead of each email's real recipient
+				(e.g. contact form submissions, password resets). Clear this field to let each email go to its normal recipient.
+			</p>
+		</div>
 		<?php endif; ?>
 
 		<nav class="rm-tabs">
@@ -208,6 +236,42 @@ function rm_settings_page() {
 						       value="1" <?php checked( $intercept, '1' ); ?>>
 						<span class="rm-track"><span class="rm-thumb"></span></span>
 					</label>
+				</div>
+			</div>
+
+			<div class="rm-card">
+				<h2 class="rm-card-title">Recipients</h2>
+				<p class="rm-desc rm-desc--intro">Control where mail actually lands from this one page, instead of hunting through theme code. Exactly one of these applies at a time: Test Mode wins when it's on; otherwise Live Recipients applies if set.</p>
+
+				<div class="rm-row">
+					<label class="rm-label" for="rm_live_recipients">Live Recipient(s)</label>
+					<div class="rm-control">
+						<input type="text" id="rm_live_recipients" name="rm_live_recipients"
+						       value="<?php echo esc_attr( $live_recipients ); ?>" class="rm-input"
+						       placeholder="paul@example.com, office@example.com">
+						<p class="rm-desc">Comma-separated. Used whenever Test Mode is off. If set, every email this site sends goes here instead of its normal recipient (e.g. contact form submissions, password resets). Leave blank to let each email go to its real, intended recipient as normal.</p>
+					</div>
+				</div>
+
+				<div class="rm-row rm-row--inline">
+					<div>
+						<span class="rm-label">Test Mode</span>
+						<p class="rm-desc rm-desc--tight">When on, every email this site sends is redirected to the Test Recipient(s) below instead — overriding Live Recipients too. The subject is prefixed with <code>[TEST]</code> and the original recipient is noted in the body.</p>
+					</div>
+					<label class="rm-toggle" for="rm_test_mode">
+						<input type="checkbox" id="rm_test_mode" name="rm_test_mode"
+						       value="1" <?php checked( $test_mode, '1' ); ?>>
+						<span class="rm-track"><span class="rm-thumb"></span></span>
+					</label>
+				</div>
+				<div class="rm-row">
+					<label class="rm-label" for="rm_test_recipients">Test Recipient(s)</label>
+					<div class="rm-control">
+						<input type="text" id="rm_test_recipients" name="rm_test_recipients"
+						       value="<?php echo esc_attr( $test_recipients ); ?>" class="rm-input"
+						       placeholder="you@example.com, teammate@example.com">
+						<p class="rm-desc">Comma-separated. Only used while Test Mode is on.</p>
+					</div>
 				</div>
 			</div>
 
