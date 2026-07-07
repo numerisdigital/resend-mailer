@@ -118,7 +118,7 @@ function rm_github_plugin_info( $result, $action, $args ) {
 	}
 
 	return (object) array(
-		'name'          => 'Resend Mailer',
+		'name'          => 'Numeris Remailer',
 		'slug'          => rm_github_plugin_slug(),
 		'version'       => ltrim( $release['tag_name'], 'v' ),
 		'author'        => '<a href="https://numeris.digital">Numeris Digital</a>',
