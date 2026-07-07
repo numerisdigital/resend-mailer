@@ -264,13 +264,21 @@ function rm_settings_page() {
 				<h2 class="rm-card-title">Recipients</h2>
 				<p class="rm-desc rm-desc--intro">Exactly one override applies at a time: Test Mode wins when it's on; otherwise any ticked form below is redirected to its override recipient(s), and everything else keeps going to its normal recipient.</p>
 
-				<div class="rm-row">
-					<label class="rm-label">Forms</label>
-					<div class="rm-control">
-						<?php if ( empty( $detected_forms ) ) : ?>
-						<p class="rm-desc">No forms detected yet. Submit this site's contact form once (or wait for real traffic) and it will appear here automatically — no setup required.</p>
-						<?php else : ?>
+				<div class="rm-forms-section">
+					<h3 class="rm-subheading">Forms</h3>
+					<?php if ( empty( $detected_forms ) ) : ?>
+					<p class="rm-desc">No forms detected yet. Submit this site's contact form once (or wait for real traffic) and it will appear here automatically — no setup required.</p>
+					<?php else : ?>
+					<div class="rm-forms-scroll">
 						<table class="rm-forms-table">
+							<colgroup>
+								<col class="rm-col-toggle">
+								<col class="rm-col-label">
+								<col class="rm-col-to">
+								<col class="rm-col-recipients">
+								<col class="rm-col-seen">
+								<col class="rm-col-remove">
+							</colgroup>
 							<thead>
 								<tr>
 									<th class="rm-forms-th--toggle"></th>
@@ -298,7 +306,7 @@ function rm_settings_page() {
 										       name="rm_forms[<?php echo esc_attr( $key ); ?>][label]"
 										       value="<?php echo esc_attr( $form['label'] ); ?>">
 									</td>
-									<td class="rm-forms-to"><?php echo esc_html( $form['to'] ); ?></td>
+									<td class="rm-forms-to" title="<?php echo esc_attr( $form['to'] ); ?>"><?php echo esc_html( $form['to'] ); ?></td>
 									<td>
 										<input type="text" class="rm-input rm-input--table rm-forms-recipients"
 										       name="rm_forms[<?php echo esc_attr( $key ); ?>][recipients]"
@@ -318,9 +326,9 @@ function rm_settings_page() {
 								<?php endforeach; ?>
 							</tbody>
 						</table>
-						<?php endif; ?>
-						<p class="rm-desc">Every distinct address this site's forms send mail to is detected automatically. Tick a form and add recipient(s) to redirect it elsewhere.</p>
 					</div>
+					<?php endif; ?>
+					<p class="rm-desc">Every distinct address this site's forms send mail to is detected automatically. Tick a form and add recipient(s) to redirect it elsewhere.</p>
 				</div>
 
 				<div class="rm-row rm-row--inline">

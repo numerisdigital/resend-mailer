@@ -1,6 +1,6 @@
 /* ── Wrap ─────────────────────────────────────────────────────────── */
 .rm-wrap {
-	max-width: 780px;
+	max-width: 960px;
 	padding-bottom: 60px;
 }
 
@@ -213,13 +213,39 @@
 }
 .rm-desc a { color: #0073aa; }
 
+/* ── Forms section ────────────────────────────────────────────────── */
+.rm-forms-section {
+	padding: 18px 0 14px;
+	border-top: 1px solid #f0f0f1;
+}
+.rm-subheading {
+	font-size: 13px;
+	font-weight: 600;
+	color: #1d2327;
+	margin: 0 0 14px;
+}
+.rm-forms-scroll {
+	overflow-x: auto;
+	margin-bottom: 14px;
+	border: 1px solid #f0f0f1;
+	border-radius: 6px;
+}
+
 /* ── Forms table ──────────────────────────────────────────────────── */
 .rm-forms-table {
 	width: 100%;
+	min-width: 760px;
+	table-layout: fixed;
 	border-collapse: collapse;
 	font-size: 13px;
-	margin-bottom: 6px;
 }
+.rm-col-toggle      { width: 56px; }
+.rm-col-label        { width: 15%; }
+.rm-col-to           { width: 24%; }
+.rm-col-recipients   { width: 30%; }
+.rm-col-seen         { width: 15%; }
+.rm-col-remove       { width: 44px; }
+
 .rm-forms-table th {
 	text-align: left;
 	font-size: 11px;
@@ -227,12 +253,13 @@
 	text-transform: uppercase;
 	letter-spacing: .03em;
 	color: #8c8f94;
-	padding: 0 10px 8px;
+	padding: 10px 12px;
+	background: #f9f9fa;
 	border-bottom: 1px solid #dcdcde;
+	white-space: nowrap;
 }
-.rm-forms-th--toggle { width: 48px; }
 .rm-forms-table td {
-	padding: 10px;
+	padding: 12px;
 	vertical-align: middle;
 	border-bottom: 1px solid #f0f0f1;
 }
@@ -240,11 +267,13 @@
 .rm-input--table {
 	width: 100%;
 	max-width: none;
+	box-sizing: border-box;
 }
 .rm-forms-to {
 	color: #646970;
 	font-size: 12px;
-	word-break: break-word;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
 }
 .rm-forms-seen {
 	white-space: nowrap;
@@ -261,7 +290,7 @@
 	border: none;
 	color: #b0b3b8;
 	cursor: pointer;
-	padding: 4px;
+	padding: 6px;
 	display: flex;
 	border-radius: 4px;
 	transition: color .15s, background .15s;
