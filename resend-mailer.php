@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Numeris - Emails &amp; Resend
  * Description:       Send WordPress emails via the Resend API with a fully customisable HTML template — colours, fonts, logo and more.
- * Version:           1.0.0
+ * Version:           1.1.0
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Numeris Digital
@@ -12,7 +12,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RM_VERSION', '1.0.0' );
+define( 'RM_VERSION', '1.1.0' );
 define( 'RM_FILE',    __FILE__ );
 define( 'RM_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'RM_URL',     plugin_dir_url( __FILE__ ) );
@@ -33,3 +33,4 @@ require RM_DIR . 'includes/functions.php';
 require RM_DIR . 'includes/template.php';
 require RM_DIR . 'includes/sender.php';
 require RM_DIR . 'includes/admin.php';
+require RM_DIR . 'includes/github-updater.php';
