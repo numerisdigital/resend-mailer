@@ -6,6 +6,7 @@ add_action( 'admin_enqueue_scripts', 'rm_enqueue_assets' );
 add_action( 'wp_ajax_rm_send_test',      'rm_ajax_send_test' );
 add_action( 'wp_ajax_rm_reset_template', 'rm_ajax_reset_template' );
 add_action( 'wp_ajax_rm_preview_email',  'rm_ajax_preview_email' );
+add_action( 'wp_ajax_rm_remove_form',    'rm_ajax_remove_form' );
 
 /* ── Menu ─────────────────────────────────────────────────────────── */
 
@@ -41,6 +42,7 @@ function rm_enqueue_assets( $hook ) {
 		'resetConfirm'  => 'Reset to the default template? Your edits will be lost.',
 		'mediaTitle'    => 'Select Logo',
 		'mediaButton'   => 'Use this image',
+		'removeFormConfirm' => 'Remove this form from the list? It will reappear automatically the next time it sends mail.',
 	] );
 }
 
@@ -68,8 +70,21 @@ function rm_settings_page() {
 			$raw_test_recipients   = sanitize_text_field( wp_unslash( $_POST['rm_test_recipients'] ?? '' ) );
 			update_option( 'rm_test_recipients', implode( ', ', rm_parse_email_list( $raw_test_recipients ) ) );
 
-			$raw_live_recipients   = sanitize_text_field( wp_unslash( $_POST['rm_live_recipients'] ?? '' ) );
-			update_option( 'rm_live_recipients', implode( ', ', rm_parse_email_list( $raw_live_recipients ) ) );
+			// Only update fields on forms that already exist in the detected
+			// list (looked up by key) — this is admin-editable metadata on
+			// top of a system-populated registry, not a way to create
+			// arbitrary new entries via POST.
+			$forms        = rm_get_detected_forms();
+			$posted_forms = (array) ( $_POST['rm_forms'] ?? [] );
+			foreach ( $posted_forms as $key => $data ) {
+				if ( ! isset( $forms[ $key ] ) ) {
+					continue;
+				}
+				$forms[ $key ]['enabled']    = ! empty( $data['enabled'] );
+				$forms[ $key ]['label']      = sanitize_text_field( wp_unslash( $data['label'] ?? $forms[ $key ]['label'] ) );
+				$forms[ $key ]['recipients'] = implode( ', ', rm_parse_email_list( wp_unslash( $data['recipients'] ?? '' ) ) );
+			}
+			update_option( 'rm_detected_forms', $forms );
 		}
 
 		if ( $saving_tab === 'design' ) {
@@ -115,7 +130,13 @@ function rm_settings_page() {
 	$intercept      = rm_opt( 'intercept_wp_mail', '1' );
 	$test_mode      = rm_opt( 'test_mode', '0' );
 	$test_recipients = rm_opt( 'test_recipients' );
-	$live_recipients = rm_opt( 'live_recipients' );
+	$detected_forms  = rm_get_detected_forms();
+	uasort( $detected_forms, function ( $a, $b ) {
+		return ( $b['last_seen'] ?? 0 ) <=> ( $a['last_seen'] ?? 0 );
+	} );
+	$active_form_overrides = array_filter( $detected_forms, function ( $form ) {
+		return ! empty( $form['enabled'] ) && rm_parse_email_list( $form['recipients'] ?? '' );
+	} );
 	$bg_color       = rm_opt( 'bg_color',        '#f0f0f0' );
 	$container      = rm_opt( 'container_color', '#ffffff' );
 	$text_color     = rm_opt( 'text_color',      '#1a1a1a' );
@@ -151,12 +172,12 @@ function rm_settings_page() {
 				Turn this off before going live, or real contacts won't receive mail.
 			</p>
 		</div>
-		<?php elseif ( $test_mode !== '1' && rm_parse_email_list( $live_recipients ) ) : ?>
+		<?php elseif ( $test_mode !== '1' && $active_form_overrides ) : ?>
 		<div class="notice notice-info rm-notice">
 			<p>
-				<strong>Live Recipient override is active</strong> — every outgoing email from this site is being sent to
-				<strong><?php echo esc_html( $live_recipients ); ?></strong> instead of each email's real recipient
-				(e.g. contact form submissions, password resets). Clear this field to let each email go to its normal recipient.
+				<strong><?php echo count( $active_form_overrides ); ?> form<?php echo count( $active_form_overrides ) === 1 ? '' : 's'; ?> with a recipient override active</strong> —
+				mail normally sent to <strong><?php echo esc_html( implode( ', ', wp_list_pluck( $active_form_overrides, 'label' ) ) ); ?></strong> is being redirected instead.
+				Untick a form below to let it go to its normal recipient.
 			</p>
 		</div>
 		<?php endif; ?>
@@ -241,15 +262,64 @@ function rm_settings_page() {
 
 			<div class="rm-card">
 				<h2 class="rm-card-title">Recipients</h2>
-				<p class="rm-desc rm-desc--intro">Control where mail actually lands from this one page, instead of hunting through theme code. Exactly one of these applies at a time: Test Mode wins when it's on; otherwise Live Recipients applies if set.</p>
+				<p class="rm-desc rm-desc--intro">Exactly one override applies at a time: Test Mode wins when it's on; otherwise any ticked form below is redirected to its override recipient(s), and everything else keeps going to its normal recipient.</p>
 
 				<div class="rm-row">
-					<label class="rm-label" for="rm_live_recipients">Live Recipient(s)</label>
+					<label class="rm-label">Forms</label>
 					<div class="rm-control">
-						<input type="text" id="rm_live_recipients" name="rm_live_recipients"
-						       value="<?php echo esc_attr( $live_recipients ); ?>" class="rm-input"
-						       placeholder="paul@example.com, office@example.com">
-						<p class="rm-desc">Comma-separated. Used whenever Test Mode is off. If set, every email this site sends goes here instead of its normal recipient (e.g. contact form submissions, password resets). Leave blank to let each email go to its real, intended recipient as normal.</p>
+						<?php if ( empty( $detected_forms ) ) : ?>
+						<p class="rm-desc">No forms detected yet. Submit this site's contact form once (or wait for real traffic) and it will appear here automatically — no setup required.</p>
+						<?php else : ?>
+						<table class="rm-forms-table">
+							<thead>
+								<tr>
+									<th class="rm-forms-th--toggle"></th>
+									<th>Form</th>
+									<th>Normally sends to</th>
+									<th>Override recipient(s)</th>
+									<th>Last seen</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $detected_forms as $key => $form ) : ?>
+								<tr class="rm-forms-row" data-key="<?php echo esc_attr( $key ); ?>">
+									<td>
+										<label class="rm-toggle rm-toggle--sm" for="rm_forms_<?php echo esc_attr( $key ); ?>_enabled">
+											<input type="checkbox" id="rm_forms_<?php echo esc_attr( $key ); ?>_enabled"
+											       name="rm_forms[<?php echo esc_attr( $key ); ?>][enabled]" value="1"
+											       class="rm-forms-toggle"
+											       <?php checked( ! empty( $form['enabled'] ) ); ?>>
+											<span class="rm-track"><span class="rm-thumb"></span></span>
+										</label>
+									</td>
+									<td>
+										<input type="text" class="rm-input rm-input--table"
+										       name="rm_forms[<?php echo esc_attr( $key ); ?>][label]"
+										       value="<?php echo esc_attr( $form['label'] ); ?>">
+									</td>
+									<td class="rm-forms-to"><?php echo esc_html( $form['to'] ); ?></td>
+									<td>
+										<input type="text" class="rm-input rm-input--table rm-forms-recipients"
+										       name="rm_forms[<?php echo esc_attr( $key ); ?>][recipients]"
+										       value="<?php echo esc_attr( $form['recipients'] ); ?>"
+										       placeholder="paul@example.com, office@example.com">
+									</td>
+									<td class="rm-forms-seen">
+										<?php echo esc_html( human_time_diff( (int) $form['last_seen'], time() ) ); ?> ago
+										<span class="rm-forms-count">(<?php echo (int) $form['count']; ?>)</span>
+									</td>
+									<td>
+										<button type="button" class="rm-forms-remove" data-key="<?php echo esc_attr( $key ); ?>" aria-label="Remove this form">
+											<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+										</button>
+									</td>
+								</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+						<?php endif; ?>
+						<p class="rm-desc">Every distinct address this site's forms send mail to is detected automatically. Tick a form and add recipient(s) to redirect it elsewhere.</p>
 					</div>
 				</div>
 
@@ -542,6 +612,27 @@ function rm_ajax_reset_template() {
 		wp_send_json_error( 'Insufficient permissions.' );
 	}
 	wp_send_json_success( rm_default_template() );
+}
+
+/* ── AJAX: remove a detected form ─────────────────────────────────── */
+
+function rm_ajax_remove_form() {
+	check_ajax_referer( 'rm_nonce', 'nonce' );
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_send_json_error( 'Insufficient permissions.' );
+	}
+
+	$key   = sanitize_text_field( wp_unslash( $_POST['key'] ?? '' ) );
+	$forms = rm_get_detected_forms();
+
+	if ( ! isset( $forms[ $key ] ) ) {
+		wp_send_json_error( 'Not found.' );
+	}
+
+	unset( $forms[ $key ] );
+	update_option( 'rm_detected_forms', $forms );
+
+	wp_send_json_success();
 }
 
 /* ── AJAX: preview email in browser ──────────────────────────────── */

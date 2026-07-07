@@ -18,6 +18,72 @@ function rm_parse_email_list( $value ) {
 }
 
 /**
+ * Stable identifier for a wp_mail() "to" value, used to group every send
+ * that goes to the same address(es) under one detected "form" entry.
+ * Bespoke contact forms (this plugin's actual target — neither client site
+ * runs a form plugin with its own registry) always mail a fixed address, so
+ * the destination itself is the most reliable proxy for "which form sent
+ * this", without needing any per-theme registration.
+ */
+function rm_forms_key( $to ) {
+	$addresses = array_map( 'strtolower', array_map( 'trim', (array) $to ) );
+	sort( $addresses );
+	return md5( implode( ',', $addresses ) );
+}
+
+/**
+ * All auto-detected mail destinations, keyed by rm_forms_key().
+ */
+function rm_get_detected_forms() {
+	$forms = get_option( 'rm_detected_forms', [] );
+	return is_array( $forms ) ? $forms : [];
+}
+
+/**
+ * Called on every intercepted wp_mail() send, before any override is
+ * applied, so the Sending tab's "Forms" list is self-populating — no setup
+ * needed on any site this plugin is installed on.
+ */
+function rm_record_detected_form( $to ) {
+	$key   = rm_forms_key( $to );
+	$forms = rm_get_detected_forms();
+
+	if ( isset( $forms[ $key ] ) ) {
+		$forms[ $key ]['last_seen'] = time();
+		$forms[ $key ]['count']     = (int) ( $forms[ $key ]['count'] ?? 0 ) + 1;
+	} else {
+		$address       = implode( ', ', array_map( 'trim', (array) $to ) );
+		$forms[ $key ] = [
+			'to'         => $address,
+			'label'      => $address,
+			'enabled'    => false,
+			'recipients' => '',
+			'first_seen' => time(),
+			'last_seen'  => time(),
+			'count'      => 1,
+		];
+	}
+
+	update_option( 'rm_detected_forms', $forms );
+}
+
+/**
+ * Recipient override for a given original "to", if the matching detected
+ * form has been ticked on with valid override recipient(s) configured.
+ * Returns an empty array when no override should apply.
+ */
+function rm_get_form_override( $to ) {
+	$forms = rm_get_detected_forms();
+	$key   = rm_forms_key( $to );
+
+	if ( empty( $forms[ $key ]['enabled'] ) ) {
+		return [];
+	}
+
+	return rm_parse_email_list( $forms[ $key ]['recipients'] ?? '' );
+}
+
+/**
  * Default HTML email template.
  * Uses {{variable}} placeholders replaced at send-time.
  */

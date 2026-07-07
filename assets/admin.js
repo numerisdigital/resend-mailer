@@ -110,4 +110,39 @@
       .always(function () { $btn.prop('disabled', false); });
   });
 
+  /* ── Forms: grey out recipients input when unticked, remove rows ─── */
+  function syncFormRow($row) {
+    var enabled = $row.find('.rm-forms-toggle').is(':checked');
+    $row.find('.rm-forms-recipients').toggleClass('is-disabled', !enabled);
+  }
+
+  $('.rm-forms-row').each(function () { syncFormRow($(this)); });
+
+  $(document).on('change', '.rm-forms-toggle', function () {
+    syncFormRow($(this).closest('.rm-forms-row'));
+  });
+
+  $(document).on('click', '.rm-forms-remove', function () {
+    var $btn = $(this);
+    var $row = $btn.closest('.rm-forms-row');
+
+    if (!window.confirm(rmAdmin.removeFormConfirm)) return;
+
+    $btn.prop('disabled', true);
+
+    $.post(rmAdmin.ajaxUrl, { action: 'rm_remove_form', nonce: rmAdmin.nonce, key: $btn.data('key') })
+      .done(function (res) {
+        if (res.success) {
+          $row.remove();
+        } else {
+          window.alert((res.data) || 'Could not remove.');
+          $btn.prop('disabled', false);
+        }
+      })
+      .fail(function () {
+        window.alert('Request failed — check your browser console.');
+        $btn.prop('disabled', false);
+      });
+  });
+
 }(jQuery));

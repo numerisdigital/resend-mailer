@@ -51,11 +51,16 @@ function rm_intercept_wp_mail( $null, $atts ) {
 		}
 	}
 
+	// Auto-detect this send as a "form" (grouped by its original destination
+	// address) so it shows up as a row on the Sending tab, regardless of
+	// which theme/plugin code called wp_mail() — no per-site setup needed.
+	rm_record_detected_form( $to );
+
 	// Test Mode: redirect all mail to the configured test recipient(s)
 	// instead of the real "to", so real contacts never see test traffic.
-	// Otherwise, if Live Recipient(s) is set, use that instead of whatever
-	// recipient the calling code hardcoded — lets recipients be managed
-	// centrally from this settings page rather than buried in theme code.
+	// Otherwise, if the matching form below has been ticked on with
+	// recipient(s) configured, redirect just that form's mail — everything
+	// else keeps going to its normal recipient.
 	if ( rm_opt( 'test_mode', '0' ) === '1' ) {
 		$test_recipients = rm_parse_email_list( rm_opt( 'test_recipients' ) );
 		if ( ! empty( $test_recipients ) ) {
@@ -65,9 +70,9 @@ function rm_intercept_wp_mail( $null, $atts ) {
 			$message    .= "\n\n---\nResend Mailer Test Mode: originally addressed to {$original_to}";
 		}
 	} else {
-		$live_recipients = rm_parse_email_list( rm_opt( 'live_recipients' ) );
-		if ( ! empty( $live_recipients ) ) {
-			$to = $live_recipients;
+		$form_recipients = rm_get_form_override( $to );
+		if ( ! empty( $form_recipients ) ) {
+			$to = $form_recipients;
 		}
 	}
 
