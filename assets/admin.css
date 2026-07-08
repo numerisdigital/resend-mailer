@@ -28,6 +28,16 @@
 	color: #1d2327;
 	margin: 0;
 }
+.rm-version {
+	font-size: 12px;
+	font-weight: 500;
+	color: #8c8f94;
+	background: #f0f0f1;
+	padding: 2px 8px;
+	border-radius: 4px;
+	vertical-align: middle;
+	margin-left: 2px;
+}
 
 .rm-notice {
 	margin-top: 16px !important;

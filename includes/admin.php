@@ -159,7 +159,7 @@ function rm_settings_page() {
 			<div class="rm-header-logo">
 				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
 			</div>
-			<h1>Numeris Remailer</h1>
+			<h1>Numeris Remailer <span class="rm-version">v<?php echo esc_html( RM_VERSION ); ?></span></h1>
 		</div>
 
 		<?php if ( $saved ) : ?>
