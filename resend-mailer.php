@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Numeris Remailer
  * Description:       Send WordPress emails via the Resend API with a fully customisable HTML template — colours, fonts, logo and more.
- * Version:           1.1.2
+ * Version:           1.1.3
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Numeris Digital
@@ -13,7 +13,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'RM_VERSION', '1.1.2' );
+define( 'RM_VERSION', '1.1.3' );
 define( 'RM_FILE',    __FILE__ );
 define( 'RM_DIR',     plugin_dir_path( __FILE__ ) );
 define( 'RM_URL',     plugin_dir_url( __FILE__ ) );
