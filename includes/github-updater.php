@@ -16,7 +16,7 @@ define( 'RM_GITHUB_REPO', 'numerisdigital/resend-mailer' );
 add_filter( 'pre_set_site_transient_update_plugins', 'rm_github_check_for_update' );
 add_filter( 'plugins_api', 'rm_github_plugin_info', 20, 3 );
 add_filter( 'upgrader_source_selection', 'rm_github_fix_source_folder_name', 10, 4 );
-add_action( 'upgrader_process_complete', 'rm_github_purge_cache', 10, 2 );
+add_action( 'upgrader_process_complete', 'rm_github_purge_cache_after_update', 10, 2 );
 add_action( 'delete_site_transient_update_plugins', 'rm_github_purge_cache' );
 
 /**
@@ -158,13 +158,27 @@ function rm_github_fix_source_folder_name( $source, $remote_source, $upgrader, $
 }
 
 /**
- * Drops the cached release data once an update actually runs (whether ours
- * or another plugin's — cheap to check) or an admin clicks "Check Again"
- * on the Plugins page, so a fresh release is reflected immediately rather
- * than waiting out the cache window.
+ * Drops the cached release data once any plugin update actually runs
+ * (cheap to check regardless of which plugin), so a fresh release is
+ * reflected immediately rather than waiting out the cache window.
  */
-function rm_github_purge_cache( $upgrader = null, $options = array() ) {
-	if ( null === $upgrader || ( isset( $options['action'], $options['type'] ) && 'update' === $options['action'] && 'plugin' === $options['type'] ) ) {
+function rm_github_purge_cache_after_update( $upgrader, $options ) {
+	if ( isset( $options['action'], $options['type'] ) && 'update' === $options['action'] && 'plugin' === $options['type'] ) {
 		delete_transient( 'rm_github_update_check' );
 	}
+}
+
+/**
+ * Drops the cached release data whenever WordPress's own update_plugins
+ * transient is deleted — e.g. an admin clicking "Check Again" on the
+ * Updates page. WordPress passes the transient name itself as the first
+ * argument to delete_site_transient_{$transient} (never null), so this
+ * can't share a signature with rm_github_purge_cache_after_update() above
+ * — a shared function that checked for a null first argument would never
+ * actually run when called from here, silently leaving the 6-hour GitHub
+ * response cache in place no matter how many times "Check Again" is
+ * clicked.
+ */
+function rm_github_purge_cache() {
+	delete_transient( 'rm_github_update_check' );
 }

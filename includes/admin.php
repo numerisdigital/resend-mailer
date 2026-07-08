@@ -17,9 +17,20 @@ function rm_add_menu() {
 		'manage_options',
 		RM_SLUG,
 		'rm_settings_page',
-		'dashicons-email-alt',
+		rm_menu_icon(),
 		80
 	);
+}
+
+/**
+ * The Numeris "N" mark as a base64 SVG data URI, so WordPress applies the
+ * same automatic dim/brighten-on-hover treatment it gives dashicons —
+ * that only kicks in for icon_url values it recognises as inline SVG data,
+ * not a plain image URL.
+ */
+function rm_menu_icon() {
+	$svg = file_get_contents( RM_DIR . 'assets/numeris-mark-white.svg' );
+	return 'data:image/svg+xml;base64,' . base64_encode( $svg );
 }
 
 /* ── Assets ───────────────────────────────────────────────────────── */
@@ -157,7 +168,10 @@ function rm_settings_page() {
 
 		<div class="rm-header">
 			<div class="rm-header-logo">
-				<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+				<svg width="16" height="20" viewBox="0 0 70 88" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M0 86H14V26.5L59.5 86H69.5V78.5L9.5 0H0V86Z" fill="white"></path>
+					<path d="M69.5 0H55.5V44L69.5 62.5V0Z" fill="white"></path>
+				</svg>
 			</div>
 			<h1>Numeris Remailer <span class="rm-version">v<?php echo esc_html( RM_VERSION ); ?></span></h1>
 		</div>
