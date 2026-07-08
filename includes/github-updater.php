@@ -11,7 +11,7 @@ defined( 'ABSPATH' ) || exit;
  * automatically — nothing tool-specific to build.
  */
 
-define( 'RM_GITHUB_REPO', 'numerisdigital/resend-mailer' );
+define( 'RM_GITHUB_REPO', 'numerisdigital/numeris-resend' );
 
 add_filter( 'pre_set_site_transient_update_plugins', 'rm_github_check_for_update' );
 add_filter( 'plugins_api', 'rm_github_plugin_info', 20, 3 );
@@ -118,7 +118,7 @@ function rm_github_plugin_info( $result, $action, $args ) {
 	}
 
 	return (object) array(
-		'name'          => 'Numeris Remailer',
+		'name'          => 'Numeris Resend',
 		'slug'          => rm_github_plugin_slug(),
 		'version'       => ltrim( $release['tag_name'], 'v' ),
 		'author'        => '<a href="https://numeris.digital">Numeris Digital</a>',
@@ -133,7 +133,7 @@ function rm_github_plugin_info( $result, $action, $args ) {
 
 /**
  * GitHub's auto-generated release zip extracts to a folder named after the
- * repo/commit (e.g. numerisdigital-resend-mailer-a1b2c3d), not this site's
+ * repo/commit (e.g. numerisdigital-numeris-resend-a1b2c3d), not this site's
  * actual plugin folder — WordPress needs the extracted folder renamed to
  * match, or the update installs alongside the existing copy instead of
  * replacing it.

@@ -67,7 +67,7 @@ function rm_intercept_wp_mail( $null, $atts ) {
 			$original_to = implode( ', ', (array) $to );
 			$to          = $test_recipients;
 			$subject     = '[TEST] ' . $subject;
-			$message    .= "\n\n---\nNumeris Remailer Test Mode: originally addressed to {$original_to}";
+			$message    .= "\n\n---\nNumeris Resend Test Mode: originally addressed to {$original_to}";
 		}
 	} else {
 		$form_recipients = rm_get_form_override( $to );
@@ -131,7 +131,7 @@ function rm_send_via_resend( $to, $subject, $html, $from = '', $reply_to = '' ) 
 
 	if ( is_wp_error( $response ) ) {
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Numeris Remailer] ' . $response->get_error_message() );
+		error_log( '[Numeris Resend] ' . $response->get_error_message() );
 		return [ 'success' => false, 'error' => $response->get_error_message() ];
 	}
 
@@ -141,7 +141,7 @@ function rm_send_via_resend( $to, $subject, $html, $from = '', $reply_to = '' ) 
 	if ( $code < 200 || $code >= 300 ) {
 		$msg = isset( $body['message'] ) ? (string) $body['message'] : "HTTP {$code}";
 		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log
-		error_log( '[Numeris Remailer] API error: ' . $msg );
+		error_log( '[Numeris Resend] API error: ' . $msg );
 		return [ 'success' => false, 'error' => $msg ];
 	}
 

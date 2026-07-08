@@ -1,4 +1,4 @@
-/* Numeris Remailer — admin JS */
+/* Numeris Resend — admin JS */
 (function ($) {
   'use strict';
 

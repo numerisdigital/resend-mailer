@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name:       Numeris Remailer
+ * Plugin Name:       Numeris Resend
  * Description:       Send WordPress emails via the Resend API with a fully customisable HTML template — colours, fonts, logo and more.
  * Version:           1.1.4
  * Requires at least: 6.0
