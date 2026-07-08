@@ -6,6 +6,7 @@
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            Numeris Digital
+ * Author URI:        https://numeris.digital
  * License:           GPL-2.0+
  * Text Domain:       resend-mailer
  */
